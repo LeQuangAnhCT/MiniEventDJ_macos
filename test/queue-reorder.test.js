@@ -1,0 +1,22 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+const source = fs.readFileSync(path.join(__dirname, '../src/renderer.js'), 'utf8');
+const code = source.slice(source.indexOf('function dropIntoQueue('), source.indexOf('function enableCrossListDrops('))
+  + source.slice(source.indexOf('function queueDropAfter('), source.indexOf('function overQueue('));
+const state = { queue: ['a', 'b', 'c'].map(path => ({ path })), library: [{ path: 'd', volume: 75 }] };
+const context = { state, draggedItem: null, getTrack: (tracks, path) => tracks.find(item => item.path === path), makeTrack: path => ({ path }), saveSoon() {}, toast() {} };
+vm.createContext(context); vm.runInContext(code, context);
+const order = () => state.queue.map(item => item.path).join('');
+context.draggedItem = { source: 'queue', path: 'a' }; context.dropIntoQueue('b', true); assert.equal(order(), 'bac', 'drop after adjacent item moves down');
+context.draggedItem = { source: 'queue', path: 'c' }; context.dropIntoQueue('b', false); assert.equal(order(), 'cba', 'drop before item moves up');
+const queueRow = { getBoundingClientRect: () => ({ top: 100, height: 40 }) };
+context.draggedItem = { source: 'queue', path: 'b' };
+assert.equal(context.queueDropAfter({ currentTarget: queueRow, clientY: 120 }, 'b'), true, 'dropping onto own row midpoint resolves after it');
+context.draggedItem = { source: 'queue', path: 'a' };
+assert.equal(context.queueDropAfter({ currentTarget: queueRow, clientY: 120 }, 'b'), false, 'dropping an item after target midpoint resolves before it');
+context.draggedItem = { source: 'queue', path: 'c' }; context.dropIntoQueue(); assert.equal(order(), 'bac', 'drop into empty area moves to end');
+context.draggedItem = { source: 'library', path: 'd' }; context.dropIntoQueue('b', true); assert.equal(order(), 'bdac'); assert.equal(state.queue[1].volume, 75);
+context.draggedItem = { source: 'library', path: 'd' }; context.dropIntoQueue(); assert.equal(order(), 'bdac', 'duplicate library items stay unique');
+console.log('queue-reorder: OK');

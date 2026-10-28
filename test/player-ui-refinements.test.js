@@ -1,0 +1,26 @@
+const assert = require('node:assert/strict');
+const fs = require('fs');
+const path = require('path');
+const html = fs.readFileSync(path.join(__dirname,'../src/index.html'),'utf8');
+const js = fs.readFileSync(path.join(__dirname,'../src/renderer.js'),'utf8');
+assert.match(html,/id="previous-track"[\s\S]*?@click="playPreviousTrack"/,'previous-track button is connected');
+assert.match(html,/id="next-track"[\s\S]*?@click="playNextTrack"/,'next-track button is connected');
+assert.doesNotMatch(html,/<b>Tiếp<\/b>/,'old next text button is gone');
+assert.doesNotMatch(html,/<div class="deck-art"/,'album illustration removed from deck');
+assert.doesNotMatch(html,/<div class="wave-timestamps"/,'no deck timestamps displayed');
+assert.match(html,/<svg class="tempo-gauge-icon"/,'tempo icon visible');
+assert.match(html,/<canvas id="meter" width="104" height="118"/,'meter resized');
+assert.match(js,/function playPreviousTrack\(\)/,'previous track action exists');
+assert.match(js,/playPreviousTrack,playNextTrack/,'previous action exposed to Vue');
+console.log('player-ui-refinements: OK');
+
+const vm = require('vm');
+const action = js.slice(js.indexOf('function playPreviousTrack()'), js.indexOf('function playNextTrack()'));
+const played = [];
+const context = { state:{queue:[{path:'a'},{path:'b'},{path:'c'}],active:{path:'b'},selectedQueueTrackId:null},playItem:track=>played.push(track.path),toast:()=>{} };
+vm.createContext(context); vm.runInContext(action,context);
+context.playPreviousTrack();
+assert.equal(played.pop(),'a','previous track follows queue order');
+context.state.active.path='a';context.playPreviousTrack();
+assert.equal(played.pop(),'c','previous track wraps at queue start');
+console.log('previous-track-behavior: OK');

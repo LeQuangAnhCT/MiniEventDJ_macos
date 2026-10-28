@@ -1,0 +1,26 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+const source = fs.readFileSync(path.join(__dirname, '../src/renderer.js'), 'utf8');
+const code = source.slice(source.indexOf('async function analyzeTrack('), source.indexOf('function drawWaveform('));
+let nativeReads = 0, duration = 1800;
+const state = { waveformMinutes: 30, audioCache: {} };
+const dj = { audioMeta: async () => ({ mtimeMs: 1, size: 30 * 1024 * 1024 }), waveformSamples: async () => { nativeReads++; return { sampleRate: 100, samples: [0, .5, 1] }; } };
+const context = { state, window: { dj }, Vue: { markRaw: value => value }, analysisVersion: 5, maxAnalysisBytes: 24 * 1024 * 1024, maxUnknownDurationBytes: 8 * 1024 * 1024, analysisPromises: new Map(), cacheFor: path => state.audioCache[path], readTrackDuration: async () => duration, runAnalysisWorker: async () => ({ peaks: [1] }), saveSoon() {}, console };
+vm.createContext(context); vm.runInContext(code, context);
+(async () => {
+  const track = { path: 'song.mp3' };
+  let result = await context.analyzeTrack(track);
+  assert.equal(result.analysisLimited, undefined, '30 minutes is within the limit'); assert.equal(nativeReads, 1, 'large files use bounded streaming');
+  state.waveformMinutes = 1;
+  result = await context.analyzeTrack(track);
+  assert.equal(result.analysisLimited, true, 'lowering the limit switches cached waveform to progress');
+  state.waveformMinutes = 30;
+  result = await context.analyzeTrack(track);
+  assert.equal(result.analysisLimited, undefined, 'raising limit rebuilds previously limited waveform'); assert.equal(nativeReads, 2);
+  duration = 1801;
+  result = await context.analyzeTrack({ path: 'long.mp3' });
+  assert.equal(result.analysisLimited, true, 'more than 30 minutes uses progress'); assert.equal(nativeReads, 2);
+  console.log('waveform-limit: OK');
+})().catch(error => { console.error(error); process.exitCode = 1; });

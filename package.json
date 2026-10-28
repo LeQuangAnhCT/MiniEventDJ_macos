@@ -1,0 +1,18 @@
+{
+  "name": "minieventdj-tauri",
+  "version": "2.2.7",
+  "private": true,
+  "description": "MiniEventDJ desktop music player - Vue 3 + Tauri 2 (Windows)",
+  "scripts": {
+    "start": "tauri dev",
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "portable": "tauri build --no-bundle",
+    "installer": "tauri build --bundles nsis",
+    "mac:universal": "tauri build --target universal-apple-darwin --bundles app,dmg",
+    "test": "node test/audio-control-logic.test.js && node test/playback-transition.test.js && node test/tauri-bridge.test.js && node test/eq-headroom.test.js && node test/eq-wheel.test.js && node test/audio-output.test.js && node test/audio-device-permission.test.js && node test/waveform-limit.test.js && node test/preview-fade.test.js && node test/player-spectrum.test.js && node test/player-ui-refinements.test.js && node test/queue-reorder.test.js && node test/queue-pointer-drag.test.js && node test/meter-threshold-layout.test.js"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.12.4"
+  }
+}

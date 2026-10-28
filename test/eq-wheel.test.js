@@ -1,0 +1,27 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+
+const source = fs.readFileSync(path.join(__dirname, '../src/renderer.js'), 'utf8');
+const handlers = source.slice(source.indexOf('function setEqParameter('), source.indexOf('const libraryItems='));
+const input = {};
+const band = { type: 'peaking', frequency: 1000, gain: 0, q: 1 };
+const context = { state: { eq: { bands: [band] } }, ui: { eqSelected: 0 }, document: { activeElement: input }, applyTone() {}, drawEqCurve() {}, saveSoon() {} };
+vm.createContext(context); vm.runInContext(handlers, context);
+let prevented = false;
+const event = (deltaY, target = input) => ({ deltaY, currentTarget: target, preventDefault() { prevented = true; } });
+context.wheelEqParameter(event(-1), 'gain');
+assert.equal(band.gain, .5); assert.equal(prevented, true);
+context.wheelEqParameter(event(1), 'q');
+assert.equal(band.q, .9);
+prevented = false; context.wheelEqParameter(event(-1, {}), 'gain');
+assert.equal(band.gain, .5); assert.equal(prevented, false, 'unfocused controls allow normal scrolling');
+band.q = 10; context.wheelEqParameter(event(-1), 'q'); assert.equal(band.q, 10);
+band.q = .1; context.wheelEqParameter(event(1), 'q'); assert.equal(band.q, .1, 'scrolling down at minimum Q must not jump to 1');
+context.wheelEqParameter(event(1), 'q'); assert.equal(band.q, .1, 'repeated scrolling stays at minimum');
+context.setEqParameter('q', 0); assert.equal(band.q, .1, 'zero is clamped to minimum Q');
+band.q = 10;
+band.type = 'highshelf'; prevented = false; context.wheelEqParameter(event(1), 'q');
+assert.equal(band.q, 10); assert.equal(prevented, false, 'shelves have no Q control');
+console.log('eq-wheel: OK');

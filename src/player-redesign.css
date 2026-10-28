@@ -1,0 +1,204 @@
+/* MiniEventDJ — approved black/white live deck design.
+   Scoped only to the player cards; all sidebar, taskbar, library and settings CSS remain intact. */
+.player-grid{grid-template-columns:minmax(0,1.6fr) minmax(290px,.85fr);gap:14px;align-items:stretch}
+.player-grid .deck-card-redesign{padding:18px 20px;background:#191919;border-color:#383838}
+.deck-card-redesign .section-head i,.player-grid .section-head i{width:6px;height:6px;border-radius:50%;background:#f1f1f1;box-shadow:0 0 0 3px rgba(255,255,255,.07)}
+.deck-main{display:grid;grid-template-columns:minmax(0,1fr) 134px;gap:18px;align-items:stretch;margin-top:14px}
+.deck-primary{display:flex;flex-direction:column;min-width:0;gap:0}
+.deck-track-hero{display:grid;grid-template-columns:114px minmax(0,1fr);gap:16px;align-items:center;min-width:0}
+.deck-art{width:114px;height:114px;overflow:hidden;display:grid;place-items:center;border-radius:15px;background:#0c0c0c;border:1px solid #474747;box-shadow:0 6px 23px rgba(0,0,0,.35)}
+.deck-art svg{width:100%;height:100%}
+.deck-track-meta{min-width:0}
+.deck-track-meta small{display:block;font-weight:750;font-size:10px;letter-spacing:.1em;color:#a2a2a2}
+.deck-track-meta h3{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;margin:11px 0 6px;font-size:clamp(15px,1.55vw,21px);line-height:1.28;color:#f7f7f7}
+.deck-track-meta p{margin:0;color:#999;font-size:11px;line-height:1.5}
+.deck-track-meta p span{padding:0 5px}
+.live-track-line{display:inline-block;margin-top:10px;color:#bdbdbd;font-size:9px;letter-spacing:.07em}
+/* Waveform covers the full playable distance. The normal slider takes the exact
+   same width/position whenever analysis has no peaks (not just long songs). */
+.deck-card-redesign .full-track-wave{margin-top:10px;background:transparent;border:0;border-radius:4px;min-height:0}
+.deck-card-redesign .full-track-wave canvas{height:66px;width:100%;display:block;touch-action:none}
+.deck-card-redesign .compact-wave-fallback{margin-top:40px;margin-bottom:22px;min-height:9px;height:9px;background:#3c3c3c;border:0;border-radius:999px}
+.deck-card-redesign .compact-wave-fallback .long-track-progress-fill{background:#f6f6f6;transition:width 100ms linear}
+.deck-card-redesign .compact-wave-fallback.progress-disabled{cursor:default;opacity:.6}
+.deck-card-redesign .wave-timestamps{display:flex;justify-content:space-between;margin-top:2px;color:#aaa;font-size:10px;font-weight:650;font-variant-numeric:tabular-nums}
+.deck-card-redesign .transport-row{padding:11px 0 13px;justify-content:center;border-bottom:1px solid #303030}
+.deck-card-redesign .transport{display:flex;justify-content:center;align-items:center;gap:19px;width:100%;}
+.deck-card-redesign .transport-actions{display:flex;align-items:center;gap:7px;border:0;background:transparent;padding:0}
+.deck-card-redesign .transport-action{min-height:34px;padding:0 12px;gap:5px;background:#222;border:1px solid #444;border-radius:999px;color:#ddd;font-size:10px;font-weight:650;white-space:nowrap;transition:transform 150ms cubic-bezier(.22,1,.36,1),background-color 150ms ease,border-color 150ms ease}
+.deck-card-redesign .transport-action:hover{background:#343434;border-color:#777;color:#fff;transform:translateY(-1px)}
+.deck-card-redesign .transport-action:active{transform:scale(.96)}
+.deck-card-redesign .transport-action.active{background:#ededed;color:#111;border-color:#eee}
+.deck-card-redesign .transport-action b{font-size:10px;font-weight:700}
+.deck-card-redesign .transport-action span{font-size:16px}
+.deck-card-redesign .next-action{margin-left:0}
+.deck-card-redesign .play-toggle{order:0;width:53px;height:53px;padding:0;border-radius:50%;box-shadow:0 5px 15px rgba(255,255,255,.08);transition:transform 160ms cubic-bezier(.22,1,.36,1),box-shadow 160ms ease,background-color 160ms ease}
+.deck-card-redesign .play-toggle:hover{transform:scale(1.055);box-shadow:0 6px 19px rgba(255,255,255,.14)}
+.deck-card-redesign .play-toggle:active{transform:scale(.95)}
+.deck-card-redesign .deck-adjustments{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(145px,.8fr);gap:14px;align-items:center;padding-top:13px}
+.deck-card-redesign .tempo-group{gap:6px;min-width:0}
+.deck-card-redesign .tempo-metric{min-width:74px;white-space:nowrap}
+.deck-card-redesign .tempo-metric small{font-size:8px;letter-spacing:.02em}
+.deck-card-redesign .tempo-metric strong{font-size:12px;margin-top:3px}
+.deck-card-redesign .tempo-group button{height:28px;min-width:28px;padding:0 5px;background:#242424;border-color:#383838;border-radius:9px;color:#ddd;font-size:13px}
+.deck-card-redesign .tempo-group button:hover{background:#383838}
+.deck-card-redesign .tempo-group>input{width:60px;min-width:35px;flex:1;accent-color:#fff}
+.deck-card-redesign .tempo-group .bpm{min-width:29px}
+.deck-card-redesign .tempo-group .bpm small{font-size:8px}
+.deck-card-redesign .tempo-group .bpm strong{font-size:11px}
+.deck-card-redesign .volume-control{display:grid;grid-template-columns:1fr auto;gap:7px;min-width:0;align-items:center}
+.deck-card-redesign .volume-control span{font-size:9px;white-space:nowrap}
+.deck-card-redesign .volume-control strong{font-size:11px}
+.deck-card-redesign .volume-control input{width:100%;margin:0;accent-color:#fff}
+/* Large L/R meters are not a tiny decorative strip: two distinct vertical columns. */
+.deck-card-redesign .meter-wrap{display:flex;flex-direction:column;align-items:stretch;gap:8px;padding:12px 10px 11px;background:linear-gradient(140deg,#1d1d1d,#121212);border:1px solid #3c3c3c;border-radius:14px;color:#eee;min-width:0;max-width:none}
+.deck-card-redesign .stereo-title{font-size:9px;font-weight:800;text-align:center;white-space:nowrap;letter-spacing:.03em}
+.deck-card-redesign .channel-labels{display:grid;grid-template-columns:1fr 1fr;justify-items:center;gap:0;padding:0 2px;margin-top:3px;color:#ddd;font-size:12px;font-weight:800}
+.deck-card-redesign .meter-wrap canvas{display:block;margin:0 auto;background:transparent;border-radius:0;width:112px;height:152px;max-width:100%}
+/* Side cards follow the same restrained, original monochrome UI. */
+.player-side .preview-card,.player-side .player-eq-card{background:#191919;border-color:#383838}
+.player-side .preview-wave-wrap{margin-top:10px}
+.player-side .preview-wave-wrap canvas{height:42px}
+.player-side .preview-long-track{margin-top:10px;height:8px}
+.player-side .preview-card .preview-listen{background:#242424;border-color:#454545;transition:background-color 160ms,transform 160ms}
+.player-side .preview-card .preview-listen:hover{background:#343434;transform:translateY(-1px)}
+.player-side .preview-card input[type="range"]{accent-color:#fff}
+@media(max-width:1500px){
+ .player-grid{grid-template-columns:minmax(0,1.45fr) minmax(280px,.82fr)}
+ .deck-main{grid-template-columns:minmax(0,1fr) 116px;gap:12px}
+ .deck-card-redesign .meter-wrap{padding:12px 5px}
+ .deck-card-redesign .meter-wrap canvas{width:106px;height:152px}
+ .deck-card-redesign .transport{gap:9px}
+ .deck-card-redesign .transport-action{padding:0 9px}
+ .deck-card-redesign .deck-adjustments{grid-template-columns:1fr}
+ .deck-card-redesign .volume-control{grid-template-columns:100px 34px minmax(0,1fr);gap:8px}
+ .deck-card-redesign .volume-control input{grid-column:auto}
+}
+@media(max-width:1150px){
+ .player-grid{grid-template-columns:1fr}
+ .player-side{display:grid;grid-template-columns:1.1fr 1fr;align-items:stretch}
+ .deck-card-redesign .deck-adjustments{grid-template-columns:1fr 1fr}
+ .deck-card-redesign .volume-control{grid-template-columns:1fr auto}
+ .deck-card-redesign .volume-control input{grid-column:1/-1}
+}
+@media(max-width:700px){
+ .player-side{grid-template-columns:1fr}
+ .deck-main{grid-template-columns:1fr}
+ .deck-card-redesign .meter-wrap{display:flex;align-items:center;flex-direction:row;gap:12px;justify-content:center}
+ .deck-card-redesign .meter-wrap .channel-labels{width:36px;grid-template-columns:1fr;gap:12px}
+ .deck-card-redesign .meter-wrap canvas{width:112px}
+ .deck-card-redesign .deck-adjustments{grid-template-columns:1fr}
+ .deck-card-redesign .transport{gap:8px;flex-wrap:wrap}
+ .deck-card-redesign .transport-action{padding:0 9px}
+}
+@media(prefers-reduced-motion:reduce){
+ .deck-card-redesign .transport-action,.deck-card-redesign .play-toggle,.player-side .preview-card .preview-listen{transition-duration:0.01ms!important}
+}
+
+/* Approved refinements v2 — no artwork, smaller stereo, centered skip controls, compact tempo. */
+.player-grid{align-items:start}
+.player-grid .deck-card-redesign{padding:16px 20px}
+.deck-card-redesign .deck-main{grid-template-columns:minmax(0,1fr) 110px;align-items:center;gap:15px;margin-top:10px}
+.deck-card-redesign .deck-track-hero{display:block;min-height:0;margin-bottom:8px}
+.deck-card-redesign .deck-track-meta small{font-size:9px}
+.deck-card-redesign .deck-track-meta h3{font-size:clamp(16px,1.45vw,22px);margin:7px 0 4px;max-width:100%}
+.deck-card-redesign .live-track-line{display:flex;align-items:center;gap:6px;margin-top:3px;font-weight:750;font-size:10px;color:#a6a6a6}
+.deck-card-redesign .live-track-line.is-active{color:#f5f5f5}
+.deck-card-redesign .full-track-wave{margin-top:10px}
+.deck-card-redesign .full-track-wave canvas{height:60px}
+.deck-card-redesign .compact-wave-fallback{margin-top:28px;margin-bottom:28px}
+.deck-card-redesign .transport-row{padding:8px 0 12px}
+.deck-card-redesign .transport{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;justify-content:stretch}
+.deck-card-redesign .transport-actions{justify-self:end;gap:6px}
+.deck-card-redesign .transport-main{grid-column:2;display:flex;align-items:center;justify-content:center;gap:12px}
+.deck-card-redesign .transport-skip{display:grid;place-items:center;width:36px;height:36px;min-width:36px;padding:0;border:1px solid #373737;border-radius:50%;color:#f2f2f2;background:#242424;transition:background-color 150ms ease,transform 150ms ease}
+.deck-card-redesign .transport-skip:hover:not(:disabled){background:#373737;transform:translateY(-1px)}
+.deck-card-redesign .transport-skip:active:not(:disabled){transform:scale(.94)}
+.deck-card-redesign .transport-skip:disabled{opacity:.4;cursor:default}
+.deck-card-redesign .transport-action{min-height:32px;padding:0 10px}
+.deck-card-redesign .play-toggle{width:48px;height:48px}
+.deck-card-redesign .deck-adjustments{grid-template-columns:minmax(0,1.13fr) minmax(0,.87fr);gap:14px;padding-top:11px}
+.deck-card-redesign .tempo-group{display:flex;align-items:center;gap:7px;min-width:0}
+.deck-card-redesign .tempo-group .tempo-metric{min-width:91px}
+.deck-card-redesign .tempo-metric small{display:flex;align-items:center;gap:4px;letter-spacing:0;font-size:8px;white-space:nowrap}
+.deck-card-redesign .tempo-gauge-icon{flex:none;color:#dedede;vertical-align:middle}
+.deck-card-redesign .tempo-metric strong{margin-top:2px}
+.deck-card-redesign .tempo-group button{display:inline-flex;align-items:center;justify-content:center;flex:0 0 29px;min-width:29px;width:29px;height:29px;line-height:1;padding:0;border-radius:9px;font-size:16px;font-family:inherit;font-weight:700}
+.deck-card-redesign .tempo-group #tempo-reset{font-size:16px}
+.deck-card-redesign .tempo-group>input{min-width:52px;flex:1;margin:0;height:22px}
+.deck-card-redesign .tempo-group .bpm{min-width:31px}
+.deck-card-redesign .volume-control{display:grid;grid-template-columns:1fr auto;min-width:0;gap:5px;align-items:center}
+.deck-card-redesign .volume-control input{grid-column:1/-1;margin:0;height:22px}
+.deck-card-redesign .meter-wrap{max-width:none;width:110px;min-height:0;align-self:center;gap:5px;padding:10px 5px;background:#171717}
+.deck-card-redesign .stereo-title{font-size:8px;letter-spacing:0}
+.deck-card-redesign .channel-labels{font-size:10px;margin-top:0}
+.deck-card-redesign .meter-wrap canvas{width:104px;height:118px;max-width:100%}
+.player-side .player-eq-card{min-height:108px;flex:0 0 auto}
+.player-side .player-eq-card canvas{height:70px;min-height:0}
+@media(max-width:1500px){
+ .deck-card-redesign .deck-main{grid-template-columns:minmax(0,1fr) 106px;gap:12px}
+ .deck-card-redesign .meter-wrap{width:106px;padding:9px 3px}
+ .deck-card-redesign .meter-wrap canvas{width:100px;height:113px}
+ .deck-card-redesign .deck-adjustments{grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:10px}
+ .deck-card-redesign .tempo-group .tempo-metric{min-width:82px}
+ .deck-card-redesign .transport{gap:6px}
+ .deck-card-redesign .transport-main{gap:9px}
+}
+@media(max-width:1120px){
+ .deck-card-redesign .deck-adjustments{grid-template-columns:1fr}
+ .deck-card-redesign .volume-control{grid-template-columns:minmax(0,1fr) auto}
+}
+@media(max-width:700px){
+ .deck-card-redesign .deck-main{grid-template-columns:1fr}
+ .deck-card-redesign .transport{grid-template-columns:1fr;gap:9px}
+ .deck-card-redesign .transport-actions,.deck-card-redesign .transport-main{grid-column:1;justify-self:center}
+ .deck-card-redesign .meter-wrap{display:flex;flex-direction:column;max-width:150px;margin:0 auto}
+ .deck-card-redesign .meter-wrap .channel-labels{display:grid;grid-template-columns:1fr 1fr;width:100%;gap:0}
+}
+@media(prefers-reduced-motion:reduce){.deck-card-redesign .transport-skip{transition:none}}
+
+/* v3: requested proportional layout, quieter controls, and real-time 70% warning band */
+.player-grid{align-items:stretch}
+.player-grid .deck-card-redesign{display:flex;flex-direction:column;min-height:0}
+.player-grid .deck-card-redesign .deck-main{flex:1;align-items:stretch}
+.player-grid .deck-card-redesign .deck-primary{min-height:0;flex:1;display:flex;flex-direction:column}
+.player-grid .deck-card-redesign .deck-adjustments{margin-top:auto;display:grid;grid-template-columns:minmax(0,1fr) minmax(210px,.82fr);align-items:end;column-gap:24px;padding-top:12px}
+.player-grid .player-side{height:100%;min-height:0;display:flex;flex-direction:column}
+.player-grid .player-side .player-eq-card{flex:1 1 auto;min-height:110px}
+.player-grid .deck-card-redesign .meter-wrap{align-self:flex-start;margin-top:-7px}
+.player-grid .deck-card-redesign .deck-track-hero{margin-bottom:15px}
+.player-grid .deck-card-redesign .compact-wave-fallback{margin-top:28px;margin-bottom:25px}
+.player-grid .deck-card-redesign .transport-row{margin-top:8px}
+/* Tempo percent sits ABOVE its range, matching the master volume field. */
+.deck-card-redesign .tempo-group{display:flex;flex-direction:column;gap:7px;min-width:0;width:100%}
+.deck-card-redesign .control-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:20px;color:#f5f5f5}
+.deck-card-redesign .control-heading strong{font-size:12px;font-weight:750;font-variant-numeric:tabular-nums;color:#fff}
+.deck-card-redesign .control-caption{display:inline-flex;align-items:center;gap:7px;font-size:9px;font-weight:750;letter-spacing:.055em;white-space:nowrap}
+.deck-card-redesign .tempo-gauge-icon{width:18px;height:18px;stroke:#f5f5f5}
+.deck-card-redesign .tempo-slider-row{display:flex;align-items:center;gap:7px;min-width:0;min-height:30px}
+.deck-card-redesign .tempo-slider-row>input{flex:1;width:100%;min-width:35px;margin:0;height:24px;accent-color:#fff}
+.deck-card-redesign .tempo-slider-row>button{display:inline-flex;align-items:center;justify-content:center;flex:0 0 29px;width:29px;height:29px;min-width:29px;padding:0;line-height:1;font-size:16px;border:1px solid #424242;border-radius:9px;color:#e8e8e8;background:#242424}
+.deck-card-redesign .tempo-slider-row>button:hover{background:#353535}
+.deck-card-redesign .tempo-slider-row .bpm{flex:0 0 32px;text-align:center;min-width:32px}
+.deck-card-redesign .tempo-slider-row .bpm small{display:block;font-size:8px;color:#aaa}
+.deck-card-redesign .tempo-slider-row .bpm strong{display:block;font-size:10px;color:#ddd}
+/* Master volume stays on right, with its own readable speaker icon and percentage. */
+.player-grid .deck-card-redesign .volume-control{justify-self:end;width:100%;max-width:350px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px;min-width:0;align-items:center}
+.deck-card-redesign .volume-title{display:inline-flex;gap:7px;align-items:center;min-width:0;white-space:nowrap;font-size:9px;font-weight:750;letter-spacing:.04em}
+.deck-card-redesign .volume-speaker-icon{flex:0 0 18px;stroke:#f5f5f5}
+.deck-card-redesign .volume-control>strong{font-size:12px;justify-self:end;font-variant-numeric:tabular-nums}
+.deck-card-redesign .volume-control input{grid-column:1/-1;display:block;width:100%;height:24px;margin:0}
+@media(max-width:1350px){
+ .player-grid .deck-card-redesign .deck-adjustments{grid-template-columns:minmax(0,1fr) minmax(190px,.82fr);column-gap:14px}
+ .deck-card-redesign .tempo-slider-row{gap:5px}
+ .deck-card-redesign .tempo-slider-row>button{width:27px;flex-basis:27px;min-width:27px}
+}
+@media(max-width:1120px){
+ .player-grid .deck-card-redesign .deck-adjustments{grid-template-columns:1fr;gap:14px;align-items:stretch}
+ .player-grid .deck-card-redesign .volume-control{max-width:100%;justify-self:stretch}
+}
+@media(max-width:700px){
+ .player-grid .player-side{height:auto}
+ .player-grid .deck-card-redesign .deck-main{align-items:start}
+ .player-grid .deck-card-redesign .meter-wrap{margin-top:0}
+}

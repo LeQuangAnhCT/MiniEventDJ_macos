@@ -1,0 +1,4 @@
+Giao diện chính MiniEventDJ được giữ đen/xám như bản gốc.
+Chỉ thanh điều hướng bên trái là mẫu mới đen/trắng.
+Các kiểu màu của vùng chính vẫn ở src/tokens.css và src/style.css.
+Không thêm lại phần style workspace xanh vào src/polish.css.

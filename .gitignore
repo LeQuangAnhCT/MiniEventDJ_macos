@@ -1,0 +1,13 @@
+node_modules/
+src-tauri/target/
+src-tauri/gen/
+release/
+tauri-output-*/
+
+# Temporary source-recovery copies; the source lives in src/ and src-tauri/src/.
+src/src/
+src-tauri/src-recovery-current/
+src-tauri/src-tauri/
+
+*.log
+.DS_Store

@@ -1,0 +1,36 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+
+const source = fs.readFileSync(path.join(__dirname, '../src/renderer.js'), 'utf8');
+const handlers = source.slice(source.indexOf('async function routeOutput('), source.indexOf('function setEqParameter('));
+const main = { calls: [], async setSinkId(id) { this.calls.push(id); if (id === 'missing') throw new Error('NotFound'); } };
+const preview = { calls: [], async setSinkId(id) { this.calls.push(id); if (id === 'missing') throw new Error('NotFound'); } };
+const state = { outputMain: 'default', outputNext: 'default' };
+const ui = { outputBusy: false, outputError: '' };
+const context = { state, ui, audioContext: main, previewDeck: preview, mainOutputApplied: null, saveSoon() {}, toast() {}, console: { warn() {} } };
+vm.createContext(context); vm.runInContext(handlers, context);
+(async () => {
+  await context.setOutput('main', 'speakers', {});
+  assert.equal(main.calls.at(-1), 'speakers');
+  assert.equal(state.outputMain, 'speakers');
+  assert.equal(preview.calls.length, 0, 'main output routes the AudioContext, not preview');
+  await context.setOutput('next', 'headphones', {});
+  assert.equal(preview.calls.at(-1), 'headphones');
+  assert.equal(state.outputNext, 'headphones');
+  const select = { value: 'missing' };
+  await context.setOutput('main', 'missing', select);
+  assert.equal(select.value, 'speakers'); assert.equal(state.outputMain, 'speakers'); assert.ok(ui.outputError);
+  await context.setOutput('main', 'default', {});
+  assert.equal(main.calls.at(-1), '', 'default maps to the Web Audio default device');
+  state.outputMain = 'saved'; context.mainOutputApplied = null;
+  await context.restoreMainOutput();
+  assert.equal(main.calls.at(-1), 'saved', 'saved main output is applied before playback');
+  state.outputMain = 'missing'; context.mainOutputApplied = null;
+  await context.restoreMainOutput();
+  assert.equal(state.outputMain, 'missing', 'preserve the saved selection if the device is temporarily unavailable'); assert.ok(ui.outputError);
+  await assert.rejects(context.routeOutput({}, 'headphones'));
+  await context.routeOutput({}, 'default');
+  console.log('audio-output: OK');
+})().catch(error => { console.error(error); process.exitCode = 1; });
