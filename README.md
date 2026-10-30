@@ -1,6 +1,27 @@
 # MiniEventDJ — bản nguồn macOS
 
-Bản nguồn này được tách riêng từ MiniEventDJ Windows. Mục Chỉnh sửa MP3 và công cụ cắt MP3 đã được bỏ khỏi bản Mac; phần phát các file MP3 vẫn được giữ. Đây là mã nguồn chuẩn bị cho macOS, chưa được build hoặc chạy thử trên Mac.
+Bản nguồn này được tách riêng từ MiniEventDJ Windows. Mục Chỉnh sửa MP3 và công cụ cắt MP3 đã được bỏ khỏi bản Mac; phần phát các file MP3 vẫn được giữ. Bản 2.2.8 đã được build và chạy thử trên Mac Apple Silicon. Yêu cầu macOS 15.4 trở lên; bản Intel/Universal cần được kiểm thử riêng.
+
+## Cập nhật trong 2.2.8
+
+- Mở file và quét thư mục nhạc trên luồng nền để tránh chặn giao diện.
+- Bổ sung khai báo microphone trong `Info.plist` và entitlement `audio-input` cho Hardened Runtime. Microphone chỉ được mở tạm để liệt kê thiết bị, không ghi âm.
+- Định tuyến nhạc chính sau EQ qua bộ phát riêng trên WebKit khi `AudioContext.setSinkId` không khả dụng; nghe thử dùng bộ phát độc lập.
+- Hiển thị thời gian hiện tại và tổng thời lượng bên dưới thanh phát; hiển thị phút:giây tại vị trí rê chuột/kéo tua và giữ thời gian ổn định trong lúc kéo.
+
+## Build và đóng gói trên Mac Apple Silicon
+
+Cài Xcode Command Line Tools, Rust và Node.js, rồi chạy tại thư mục dự án:
+
+```sh
+npm ci
+npm test
+npm run build -- --target aarch64-apple-darwin --bundles app --config '{"bundle":{"macOS":{"signingIdentity":"-"}}}'
+mkdir -p release
+pkgbuild --component src-tauri/target/aarch64-apple-darwin/release/bundle/macos/MiniEventDJ.app --identifier vn.lequanganh.minieventdj.pkg --version 2.2.8 --install-location /Applications release/MiniEventDJ_2.2.8_AppleSilicon.pkg
+```
+
+Bộ cài `.pkg` cài ứng dụng vào `/Applications`. Máy nhận không cần Node.js, Rust hoặc `node_modules`. Cấp quyền microphone khi cần liệt kê thiết bị rồi chọn riêng đầu ra nhạc chính và nghe thử trong Cài đặt của MiniEventDJ. Bản thử ký ad-hoc chưa được notarize.
 
 ## Build cho Intel và Apple Silicon
 
@@ -22,6 +43,6 @@ Không có bảo đảm tuyệt đối rằng mọi máy đều không cảnh b�
 
 ## Build thử bằng GitHub Actions
 
-Workflow `.github/workflows/build-macos.yml` chạy thủ công trên máy macOS do GitHub cung cấp. Đưa thư mục dự án lên một repository GitHub riêng, mở Actions, chọn **Build macOS Universal (test)** và **Run workflow**. Khi chạy thành công, tải artifact `MiniEventDJ-macOS-Universal-test` ở trang của lượt chạy.
+Workflow `.github/workflows/build-macos.yml` chạy thủ công trên máy macOS do GitHub cung cấp. Trong repository này, mở Actions, chọn **Build macOS Universal (test)** và **Run workflow**. Khi chạy thành công, tải artifact `MiniEventDJ-macOS-Universal-test` ở trang của lượt chạy.
 
 Workflow này ký ad-hoc để thử nghiệm, không dùng chứng chỉ Developer ID và không notarize. File tải về vẫn có thể bị Gatekeeper cảnh báo/chặn. Để phân phối chính thức, cần cấu hình ký và notarization theo hướng dẫn phía trên. Workflow chưa được chạy thử trong môi trường này.

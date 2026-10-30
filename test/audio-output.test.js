@@ -32,5 +32,40 @@ vm.createContext(context); vm.runInContext(handlers, context);
   assert.equal(state.outputMain, 'missing', 'preserve the saved selection if the device is temporarily unavailable'); assert.ok(ui.outputError);
   await assert.rejects(context.routeOutput({}, 'headphones'));
   await context.routeOutput({}, 'default');
+  // WebKit: AudioContext lacks setSinkId, but HTML audio can select speakers.
+  class OutputAudio {
+    constructor() { this.sinkId = ''; this.paused = true; }
+    async setSinkId(id) { if (id === 'missing') throw new Error('NotFound'); this.sinkId = id; }
+    async play() { this.paused = false; }
+    pause() { this.paused = true; }
+  }
+  const destination = {}, streamDestination = { stream: {} };
+  const connections = new Set([destination]);
+  context.mainOutputBridge = null;
+  context.Audio = context.HTMLMediaElement = OutputAudio;
+  context.audioContext = {
+    destination, async resume() {},
+    createMediaStreamDestination() { return streamDestination; }
+  };
+  context.outputLimiter = {
+    connect(node) { connections.add(node); },
+    disconnect(node) { connections.delete(node); }
+  };
+  const previewCalls = preview.calls.length;
+  await context.setOutput('main', 'usb', {});
+  assert.equal(context.mainOutputBridge.audio.sinkId, 'usb');
+  assert.equal(context.mainOutputBridge.audio.paused, false);
+  assert.equal(connections.has(destination), false, 'avoid playing main on two devices');
+  assert.equal(connections.has(streamDestination), true);
+  assert.equal(preview.calls.length, previewCalls, 'main bridge never reroutes preview');
+  await context.setOutput('next', 'headphones', {});
+  assert.equal(preview.calls.at(-1), 'headphones');
+  await context.setOutput('main', 'missing', {});
+  assert.equal(state.outputMain, 'usb', 'failed switch keeps the previous output');
+  assert.equal(context.mainOutputBridge.audio.sinkId, 'usb');
+  await context.setOutput('main', 'default', {});
+  assert.equal(connections.has(destination), true);
+  assert.equal(connections.has(streamDestination), false);
+  assert.equal(context.mainOutputBridge.audio.paused, true);
   console.log('audio-output: OK');
 })().catch(error => { console.error(error); process.exitCode = 1; });

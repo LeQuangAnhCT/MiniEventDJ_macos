@@ -17,7 +17,7 @@ class AudioContextMock {
   createDynamicsCompressor() { return { ...node(), threshold: parameter(0), knee: parameter(0), ratio: parameter(0), attack: parameter(0), release: parameter(0) }; }
 }
 const bands = Array.from({ length: 5 }, () => ({ type: 'peaking', frequency: 1000, q: 1, gain: 0 }));
-const context = { AudioContext: AudioContextMock, audioContext: null, outputLimiter: null, graphs: new WeakMap(), activeDeck: {}, standbyDeck: {}, state: { eq: { bands }, masterVolume: 100 }, OUTPUT_GAIN_CEILING: 1 };
+const context = { AudioContext: AudioContextMock, audioContext: null, mainOutputBridge: null, outputLimiter: null, graphs: new WeakMap(), activeDeck: {}, standbyDeck: {}, state: { eq: { bands }, masterVolume: 100 }, OUTPUT_GAIN_CEILING: 1 };
 vm.createContext(context); vm.runInContext(functions, context);
 context.applyTone();
 const a = context.graphFor(context.activeDeck), b = context.graphFor(context.standbyDeck);

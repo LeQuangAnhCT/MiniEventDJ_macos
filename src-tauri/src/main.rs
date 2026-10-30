@@ -107,8 +107,16 @@ fn register_paths(app: AppHandle, paths: Vec<String>) -> Vec<String> {
     paths.into_iter().filter(|p| allow_track(&app, Path::new(p)).is_ok()).collect()
 }
 
+// Native dialogs must not block Tauri's UI thread. Keep filesystem work on
+// the blocking pool as well, so large music libraries leave the UI responsive.
 #[tauri::command]
-fn pick_files(app: AppHandle) -> Result<Vec<String>, String> {
+async fn pick_files(app: AppHandle) -> Result<Vec<String>, String> {
+    tauri::async_runtime::spawn_blocking(move || select_audio_files(app))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+fn select_audio_files(app: AppHandle) -> Result<Vec<String>, String> {
     let picked = app.dialog().file()
         .add_filter("Âm thanh", &["mp3", "wav", "m4a", "aac", "wma", "ogg", "flac"])
         .blocking_pick_files();
@@ -123,8 +131,16 @@ fn pick_files(app: AppHandle) -> Result<Vec<String>, String> {
     Ok(output)
 }
 
+// Native dialogs must not block Tauri's UI thread. Keep filesystem work on
+// the blocking pool as well, so large music libraries leave the UI responsive.
 #[tauri::command]
-fn pick_folder(app: AppHandle) -> Result<Vec<String>, String> {
+async fn pick_folder(app: AppHandle) -> Result<Vec<String>, String> {
+    tauri::async_runtime::spawn_blocking(move || select_audio_folder(app))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+fn select_audio_folder(app: AppHandle) -> Result<Vec<String>, String> {
     let Some(folder) = app.dialog().file().blocking_pick_folder() else { return Ok(vec![]); };
     let root = folder.into_path().map_err(|e| e.to_string())?;
     let mut found = Vec::new();
@@ -263,6 +279,11 @@ fn position_quick(app: &AppHandle) {
     let _ = quick.set_position(pos);
 }
 
+#[tauri::command]
+fn audio_diagnostic(report: Value) {
+    let _ = fs::write(std::env::temp_dir().join("MiniEventDJ-audio-test.json"), report.to_string());
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
@@ -274,7 +295,7 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .manage(PlaybackState::default())
         .invoke_handler(tauri::generate_handler![
-            register_paths, pick_files, pick_folder, load_state, save_state,
+            audio_diagnostic, register_paths, pick_files, pick_folder, load_state, save_state,
             read_audio, waveform_samples, audio_meta, startup_phase, quick_control_action,
             quick_control_state, get_quick_control_state
         ])

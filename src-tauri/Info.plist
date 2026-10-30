@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>NSMicrophoneUsageDescription</key>
+<string>MiniEventDJ cần quyền microphone để hiện danh sách loa và tai nghe cho nhạc chính và nghe thử. Ứng dụng đóng microphone ngay sau khi lấy danh sách và không ghi âm.</string>
+</dict></plist>

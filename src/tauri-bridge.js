@@ -13,6 +13,7 @@
   // Renderer-compatible API, replacing contextBridge + Electron IPC.
   window.dj = Object.freeze({
     fileUrl,
+    audioDiagnostic: report => invoke('audio_diagnostic', { report }).catch(console.error),
     pickFiles: () => invoke('pick_files'),
     pickFolder: () => invoke('pick_folder'),
     loadState: async () => {

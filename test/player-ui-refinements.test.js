@@ -7,7 +7,7 @@ assert.match(html,/id="previous-track"[\s\S]*?@click="playPreviousTrack"/,'previ
 assert.match(html,/id="next-track"[\s\S]*?@click="playNextTrack"/,'next-track button is connected');
 assert.doesNotMatch(html,/<b>Tiếp<\/b>/,'old next text button is gone');
 assert.doesNotMatch(html,/<div class="deck-art"/,'album illustration removed from deck');
-assert.doesNotMatch(html,/<div class="wave-timestamps"/,'no deck timestamps displayed');
+assert.match(html,/<div class="wave-timestamps"/,'elapsed and duration labels are visible');
 assert.match(html,/<svg class="tempo-gauge-icon"/,'tempo icon visible');
 assert.match(html,/<canvas id="meter" width="104" height="118"/,'meter resized');
 assert.match(js,/function playPreviousTrack\(\)/,'previous track action exists');
@@ -24,3 +24,27 @@ assert.equal(played.pop(),'a','previous track follows queue order');
 context.state.active.path='a';context.playPreviousTrack();
 assert.equal(played.pop(),'c','previous track wraps at queue start');
 console.log('previous-track-behavior: OK');
+
+// Hover previews must not seek; dragging previews time and commits on release.
+const seekUi = {};
+const deck = { duration: 200, currentTime: 20 };
+const seekContext = { ui: seekUi, state: { active: {} }, activeDeck: deck, waveformScrubTime: null, longTrackScrubTime: null, formatTime: value => String(Math.floor(value)), updateTime: value => { seekUi.displayed = value ?? deck.currentTime; }, toast() {} };
+vm.createContext(seekContext);
+vm.runInContext(js.slice(js.indexOf('let longTrackSeekPointerId = null;'), js.indexOf('function seekActiveBy(')), seekContext);
+const seekTarget = { getBoundingClientRect: () => ({ left: 10, width: 100 }), setPointerCapture() {}, hasPointerCapture: () => true, releasePointerCapture() {}, classList: { add() {}, remove() {} } };
+const seekEvent = { currentTarget: seekTarget, clientX: 60, pointerId: 1, preventDefault() {} };
+seekContext.moveLongTrackSeek(seekEvent);
+assert.equal(seekUi.seekHintText, '100');
+assert.equal(deck.currentTime, 20, 'hover must not change playback');
+seekContext.beginLongTrackSeek(seekEvent);
+assert.equal(seekUi.displayed, 100);
+seekContext.endLongTrackSeek({ ...seekEvent, clientX: 85 });
+assert.equal(deck.currentTime, 150, 'release commits the selected time');
+seekContext.beginLongTrackSeek({ ...seekEvent, clientX: 110 });
+seekContext.cancelLongTrackSeek(seekEvent);
+assert.equal(deck.currentTime, 150, 'cancelling preserves the actual position');
+assert.equal(seekUi.displayed, 150, 'cancelling restores the displayed time');
+deck.duration = NaN;
+seekContext.beginLongTrackSeek(seekEvent);
+assert.equal(seekUi.seekHintVisible, false, 'invalid duration cannot produce a time preview');
+console.log('seek-time-preview: OK');

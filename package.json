@@ -1,6 +1,6 @@
 {
   "name": "minieventdj-tauri",
-  "version": "2.2.7",
+  "version": "2.2.8",
   "private": true,
   "description": "MiniEventDJ desktop music player - Vue 3 + Tauri 2 (Windows)",
   "scripts": {

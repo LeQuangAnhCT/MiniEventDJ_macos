@@ -40,6 +40,7 @@ const previewDeck = new Audio();
 previewDeck.preload = 'metadata';
 previewDeck.volume = .5;
 let previewToken = 0, previewLoadedPath = null, mainOutputApplied = null, previewFadeFrame = 0;
+let mainOutputBridge = null;
 let audioContext, outputLimiter, meterFrame = 0, visualDecayFrame = 0, visualRiseFrame = 0, waveformPulseFrame = 0, toastTimer, fadeTimer, draggedItem = null, volumeAdjusting = false, queuePointerDrag = null;
 let spectrumFadeLevel = 0;
 const transitionGuard = new PlaybackTransitionGuard();
@@ -94,7 +95,7 @@ function graphFor(deck) {
     outputLimiter = audioContext.createDynamicsCompressor();
     outputLimiter.threshold.value = -2; outputLimiter.knee.value = 0;
     outputLimiter.ratio.value = 20; outputLimiter.attack.value = .003; outputLimiter.release.value = .12;
-    outputLimiter.connect(audioContext.destination);
+    outputLimiter.connect(mainOutputBridge?.connected ? mainOutputBridge.destination : audioContext.destination);
   }
   const source = audioContext.createMediaElementSource(deck);
   const filters = [audioContext.createBiquadFilter(), audioContext.createBiquadFilter(), audioContext.createBiquadFilter(), audioContext.createBiquadFilter(), audioContext.createBiquadFilter()];
@@ -253,7 +254,9 @@ function drawWaveform() {
 }
 function updateTime(visibleTime = activeDeck.currentTime) {
   const duration = Number.isFinite(activeDeck.duration) ? activeDeck.duration : (state.active?.duration || 0);
-  ui.time = formatTime(visibleTime) + ' / ' + formatTime(duration);
+  ui.elapsedText = formatTime(visibleTime);
+  ui.durationText = formatTime(duration);
+  ui.time = ui.elapsedText + ' / ' + ui.durationText;
   ui.playbackProgress = duration > 0 ? Math.max(0, Math.min(100, visibleTime / duration * 100)) : 0;
 }
 function updateWaveHeader() { updateTime(); }
@@ -742,7 +745,7 @@ function advanceQueueAfter(deck) {
 function wireDeck(deck) {
   deck.addEventListener('timeupdate', () => {
     if (deck !== activeDeck) return;
-    updateTime(waveformScrubTime ?? deck.currentTime); drawWaveform();
+    updateTime(longTrackScrubTime ?? waveformScrubTime ?? deck.currentTime); drawWaveform();
     const trimEnd = trimEndFor(state.active, state.activeAnalysis, deck.duration);
     if (state.autoTrim && trimEnd > 0 && trimEnd < deck.duration - .05 && deck.currentTime >= trimEnd && !deck.__trimEndHandled) {
       deck.__trimEndHandled = true;
@@ -755,7 +758,7 @@ function wireDeck(deck) {
   });
 }
 const sidebarStoredCollapsed = (() => { try { return localStorage.getItem('medj-sidebar-collapsed') === '1'; } catch { return false; } })();
-const ui = Vue.reactive({sidebarCollapsed:sidebarStoredCollapsed,queueFocus:false,page:'player', eqOpen:false, eqOrigin:{x:innerWidth / 2,y:innerHeight / 2}, eqSelected: 0, previewPlaying:false, outputBusy:false, outputError:'', outputPickerSupported:typeof navigator.mediaDevices?.selectAudioOutput === 'function', status:'READY', statusKind:'stopped', toast:'', time:'00:00 / 00:00', playbackProgress:0, previewProgress:0, previewTime:'00:00 / 00:00', libraryQuery:'', queueQuery:'', playerQueueQuery:'', outputDevices: []});
+const ui = Vue.reactive({sidebarCollapsed:sidebarStoredCollapsed,queueFocus:false,page:'player', eqOpen:false, eqOrigin:{x:innerWidth / 2,y:innerHeight / 2}, eqSelected: 0, previewPlaying:false, outputBusy:false, outputError:'', outputPickerSupported:typeof navigator.mediaDevices?.selectAudioOutput === 'function', status:'READY', statusKind:'stopped', toast:'', time:'00:00 / 00:00', elapsedText:'00:00', durationText:'00:00', seekHintVisible:false, seekHintText:'00:00', seekHintPercent:0, playbackProgress:0, previewProgress:0, previewTime:'00:00 / 00:00', libraryQuery:'', queueQuery:'', playerQueueQuery:'', outputDevices: []});
 function toggleSidebar() {
   ui.sidebarCollapsed = !ui.sidebarCollapsed;
   try { localStorage.setItem('medj-sidebar-collapsed', ui.sidebarCollapsed ? '1' : '0'); } catch {}
@@ -990,10 +993,11 @@ async function requestAudioDevices() {
     stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
     await refreshOutputDevices();
     if (ui.outputDevices.length) toast(`Đã tìm thấy ${ui.outputDevices.length} thiết bị phát`);
-    else ui.outputError = 'Chưa tìm thấy thiết bị phát riêng. Kiểm tra loa hoặc tai nghe đã kết nối và bật trong Windows.';
+    else ui.outputError = 'Chưa tìm thấy thiết bị phát riêng. Kiểm tra loa hoặc tai nghe đã kết nối và bật trong cài đặt Âm thanh của macOS.';
   } catch (error) {
     console.warn('Không thể lấy quyền thiết bị âm thanh', error);
-    ui.outputError = error.name === 'NotFoundError' ? 'Không tìm thấy microphone. Hãy kết nối microphone để mở danh sách, hoặc chọn thiết bị trong Windows.' : 'Không được cấp quyền microphone. Hãy cho phép microphone cho ứng dụng máy tính trong Cài đặt quyền riêng tư macOS, rồi thử lại.';
+    if (typeof window !== 'undefined') window.dj.audioDiagnostic?.({ secure: window.isSecureContext, origin: location.origin, name: error.name, message: error.message, mediaDevices: typeof navigator.mediaDevices, elementSink: typeof HTMLMediaElement.prototype.setSinkId, contextSink: typeof AudioContext.prototype.setSinkId });
+    ui.outputError = error.name === 'NotFoundError' ? 'Không tìm thấy microphone. Hãy kết nối microphone để mở danh sách, hoặc chọn thiết bị trong cài đặt Âm thanh của macOS.' : 'Không được cấp quyền microphone. Hãy cho phép microphone cho ứng dụng máy tính trong Cài đặt quyền riêng tư macOS, rồi thử lại.';
   } finally {
     if (stream) stream.getTracks().forEach(track => track.stop());
     ui.outputBusy = false;
@@ -1008,16 +1012,53 @@ async function pickAudioDevice() {
     if (device.deviceId && !ui.outputDevices.some(item => item.id === device.deviceId)) ui.outputDevices.push({ id: device.deviceId, label: device.label || 'Thiết bị đã chọn' });
     ui.outputError = ''; toast('Đã thêm thiết bị, hãy chọn cho nhạc chính hoặc nghe thử');
   } catch (error) {
-    if (error.name !== 'NotAllowedError') ui.outputError = 'Không thể mở danh sách thiết bị phát của Windows.';
+    if (error.name !== 'NotAllowedError') ui.outputError = 'Không thể mở danh sách thiết bị phát của macOS.';
   } finally { ui.outputBusy = false; }
 }
 async function routeOutput(target, output) {
   const sink = output === 'default' ? '' : output;
-  if (typeof target.setSinkId !== 'function') {
-    if (sink) throw new Error('Thiết bị này không hỗ trợ chọn đầu ra riêng');
+  if (typeof target.setSinkId === 'function') {
+    await target.setSinkId(sink);
     return;
   }
-  await target.setSinkId(sink);
+  // WebKit supports per-element speaker selection before AudioContext routing.
+  // Keep EQ, gain, crossfades and limiting in the shared graph, then route its
+  // stream through a dedicated element. The preview element stays independent.
+  if (target === audioContext && typeof target.createMediaStreamDestination === 'function') {
+    if (!sink) {
+      if (mainOutputBridge?.connected) {
+        outputLimiter?.disconnect(mainOutputBridge.destination);
+        outputLimiter?.connect(audioContext.destination);
+        mainOutputBridge.connected = false;
+        mainOutputBridge.audio.pause();
+      }
+      return;
+    }
+    if (typeof HTMLMediaElement === 'undefined' || typeof HTMLMediaElement.prototype.setSinkId !== 'function') {
+      throw new Error('macOS này chưa hỗ trợ chọn loa riêng trong ứng dụng');
+    }
+    if (!mainOutputBridge) {
+      const destination = audioContext.createMediaStreamDestination();
+      const audio = new Audio(); audio.srcObject = destination.stream;
+      mainOutputBridge = { destination, audio, connected: false };
+    }
+    const bridge = mainOutputBridge, previousSink = bridge.audio.sinkId;
+    try {
+      await bridge.audio.setSinkId(sink);
+      await audioContext.resume();
+      await bridge.audio.play();
+    } catch (error) {
+      if (previousSink !== undefined) await bridge.audio.setSinkId(previousSink).catch(() => {});
+      throw error;
+    }
+    if (!bridge.connected) {
+      outputLimiter?.disconnect(audioContext.destination);
+      outputLimiter?.connect(bridge.destination);
+      bridge.connected = true;
+    }
+    return;
+  }
+  if (sink) throw new Error('Thiết bị này không hỗ trợ chọn đầu ra riêng');
 }
 async function restoreMainOutput() {
   if (mainOutputApplied === state.outputMain) return;
@@ -1026,7 +1067,7 @@ async function restoreMainOutput() {
     mainOutputApplied = state.outputMain;
   } catch (error) {
     console.warn('Không thể khôi phục thiết bị nhạc chính', error);
-    ui.outputError = 'Thiết bị nhạc chính đã lưu không khả dụng. Đang dùng thiết bị mặc định của Windows.';
+    ui.outputError = 'Thiết bị nhạc chính đã lưu không khả dụng. Đang dùng thiết bị mặc định của macOS.';
     mainOutputApplied = null;
   }
 }
@@ -1171,7 +1212,7 @@ const QueueList = {
   setup() { return { state, formatTime, previewQueue, playItem, dragQueue, beginQueuePointerDrag, endQueueDrag, clearQueueDropHint, overQueue, dropQueue, dropQueueEnd, lockVolume, setTrackVolume, removeFromQueue }; },
   template: document.querySelector('#queue-list-template').innerHTML
 };
-Vue.createApp({components:{QueueList},setup(){return {state,ui,setPage,goToHome,openEq,goToQueue,openLibrarySearch,toggleSidebar,libraryItems,queueItems,playerQueueItems,previewTrack,formatTime,togglePlay,togglePreview,setPreviewVolume,restartTrack,playPreviousTrack,playNextTrack,toggleRepeat,addFiles,addFolder,queueSelected,clearLibrary,clearQueue,toggleTrim,setMasterVolume,setFade,setWaveformMinutes,setTempo,selectLibrary,setLibrarySort,pinTrack,dragLibrary,dragQueue,overQueue,dropQueue,lockVolume,setTrackVolume,addToQueue,previewQueue,playItem,removeFromQueue,seekActiveBy,seekLongTrackTo,beginLongTrackSeek,moveLongTrackSeek,endLongTrackSeek,cancelLongTrackSeek,drawEqCurve,setEqParameter,wheelEqParameter,beginEqDrag,moveEqDrag,endEqDrag,setOutput,refreshOutputDevices,requestAudioDevices,pickAudioDevice};},template:document.querySelector('#app-template').innerHTML}).mount('#app');
+Vue.createApp({components:{QueueList},setup(){return {state,ui,setPage,goToHome,openEq,goToQueue,openLibrarySearch,toggleSidebar,libraryItems,queueItems,playerQueueItems,previewTrack,formatTime,togglePlay,togglePreview,setPreviewVolume,restartTrack,playPreviousTrack,playNextTrack,toggleRepeat,addFiles,addFolder,queueSelected,clearLibrary,clearQueue,toggleTrim,setMasterVolume,setFade,setWaveformMinutes,setTempo,selectLibrary,setLibrarySort,pinTrack,dragLibrary,dragQueue,overQueue,dropQueue,lockVolume,setTrackVolume,addToQueue,previewQueue,playItem,removeFromQueue,seekActiveBy,seekLongTrackTo,beginLongTrackSeek,moveLongTrackSeek,endLongTrackSeek,cancelLongTrackSeek,hideSeekHint,drawEqCurve,setEqParameter,wheelEqParameter,beginEqDrag,moveEqDrag,endEqDrag,setOutput,refreshOutputDevices,requestAudioDevices,pickAudioDevice};},template:document.querySelector('#app-template').innerHTML}).mount('#app');
 wireDeck(activeDeck); wireDeck(standbyDeck);
 previewDeck.addEventListener('timeupdate', updatePreviewHeader);
 previewDeck.addEventListener('ended', () => { ui.previewPlaying = false; updatePreviewHeader(); });
@@ -1185,8 +1226,8 @@ function toggleRepeat() {
   state.active.repeat = !state.active.repeat; activeDeck.loop = state.active.repeat;
   renderControls(); saveSoon(); toast(state.active.repeat ? 'Đã bật lặp lại bài' : 'Đã tắt lặp lại bài');
 };
-async function addFiles() { addToLibrary(await window.dj.pickFiles()); }
-async function addFolder() { addToLibrary(await window.dj.pickFolder()); }
+async function addFiles() { try { const paths = await window.dj.pickFiles(); if (paths.length) addToLibrary(paths); } catch (error) { console.error(error); toast('Không mở được file nhạc. Vui lòng thử lại.', 4000); } }
+async function addFolder() { try { const paths = await window.dj.pickFolder(); if (paths.length) addToLibrary(paths); } catch (error) { console.error(error); toast('Không đọc được thư mục nhạc. Vui lòng thử lại.', 4000); } }
 function queueSelected() { const item = getTrack(state.library, state.selectedLibraryTrackId); if (item) addToQueue([item]); else toast('Hãy chọn bài trong thư viện'); };
 function clearLibrary() { if (confirm('Xóa toàn bộ thư viện?')) { state.library = []; state.selectedLibraryTrackId = null; saveSoon(); } };
 function clearQueue() { if (confirm('Xóa toàn bộ hàng chờ?')) { stopPreview(); state.queue = []; state.selectedQueueTrackId = null; state.previewTrackId = null; updatePreviewHeader(); drawPreviewWaveform(); saveSoon(); } };
@@ -1231,6 +1272,19 @@ function setMasterVolume(value, notify = false) {
   if (notify) toast(`Âm lượng tổng: ${state.masterVolume}%`, 900);
 }
 let longTrackSeekPointerId = null;
+function updateSeekHint(event) {
+  const duration = Number.isFinite(activeDeck.duration) ? activeDeck.duration : 0;
+  const rect = event.currentTarget.getBoundingClientRect();
+  if (!state.active || duration <= 0 || rect.width <= 0) { ui.seekHintVisible = false; return null; }
+  const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+  ui.seekHintPercent = ratio * 100;
+  ui.seekHintText = formatTime(duration * ratio);
+  ui.seekHintVisible = true;
+  return duration * ratio;
+}
+function hideSeekHint() {
+  if (longTrackSeekPointerId === null) ui.seekHintVisible = false;
+}
 function seekLongTrackTo(ratio) {
   if (!state.active || !Number.isFinite(activeDeck.duration) || activeDeck.duration <= 0) return false;
   const target = Math.max(0, Math.min(activeDeck.duration, activeDeck.duration * ratio));
@@ -1240,11 +1294,9 @@ function seekLongTrackTo(ratio) {
   return true;
 }
 function seekLongTrackFromPointer(event) {
-  const track = event.currentTarget;
-  const rect = track.getBoundingClientRect();
-  if (rect.width <= 0) return false;
-  const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
-  longTrackScrubTime = activeDeck.duration * ratio;
+  const target = updateSeekHint(event);
+  if (target === null) return false;
+  longTrackScrubTime = target;
   updateTime(longTrackScrubTime);
   return true;
 }
@@ -1256,6 +1308,7 @@ function beginLongTrackSeek(event) {
   event.preventDefault();
 }
 function moveLongTrackSeek(event) {
+  updateSeekHint(event);
   if (event.pointerId !== longTrackSeekPointerId) return;
   seekLongTrackFromPointer(event);
   event.preventDefault();
@@ -1276,6 +1329,9 @@ function cancelLongTrackSeek(event) {
   longTrackSeekPointerId = null;
   longTrackScrubTime = null;
   event.currentTarget.classList.remove('is-scrubbing');
+  if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+  ui.seekHintVisible = false;
+  updateTime();
 }
 function seekActiveBy(seconds) {
   if (!state.active || !Number.isFinite(activeDeck.duration)) return toast('Hãy phát một bài trước');
